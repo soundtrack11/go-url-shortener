@@ -3,7 +3,9 @@ package main
 import (
 	"crypto/rand"
 	"encoding/base64"
+	"fmt"
 	"net/http"
+	"net/url"
 
 	"github.com/gin-gonic/gin"
 )
@@ -24,11 +26,19 @@ func shortenURL(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request"})
 		return
 	}
+
 	id := generateShortID()
 	urlStore[id] = json.Original
-	c.JSON(http.StatusOK, gin.H{
-		"short": "http://localhost:8080/" + id,
-	})
+
+	// получаем домен из оригинального URL (если нужно — из запроса)
+	shortDomain := c.Request.Host // домен, на который пришёл запрос
+	if u, err := url.Parse(json.Original); err == nil {
+		shortDomain = u.Host // подставляем домен исходного URL
+	}
+
+	// итоговая короткая ссылка будет на том же домене
+	shortURL := fmt.Sprintf("https://%s/%s", shortDomain, id)
+	c.JSON(http.StatusOK, gin.H{"short": shortURL})
 }
 
 func redirectURL(c *gin.Context) {
